@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7fb">
+  <title>Timetable Filter</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">T</span><span>Timetable Filter</span></div>
+    <h1>A calendar that fits your week.</h1>
+    <p class="intro">Create a filtered Google Calendar feed. Choose phrases and event details to check, and matching events will be removed.</p>
+
+    <form id="feed-form" class="card" action="/create" method="post"
+          hx-post="/create" hx-target="#feedback" hx-swap="innerHTML">
+      <section class="step" aria-labelledby="step1">
+        <span class="number" aria-hidden="true">1</span>
+        <div class="step-content">
+          <label id="step1" class="title" for="feed-url">Paste your Google Calendar iCal URL</label>
+          <p class="hint">In Google Calendar, open Settings → your calendar → Integrate calendar → copy the iCal address.</p>
+          <input id="feed-url" name="feed_url" type="url" placeholder="https://calendar.google.com/calendar/ical/..." required autocomplete="url">
+          <p class="micro">Treat this address like a password. Anyone with it may be able to view your calendar.</p>
+        </div>
+      </section>
+
+      <section class="step" aria-labelledby="step2">
+        <span class="number" aria-hidden="true">2</span>
+        <div class="step-content">
+          <label id="step2" class="title" for="terms">Choose what to remove</label>
+          <p class="hint">Enter one phrase per line. Any event containing a phrase in a selected field will be removed.</p>
+          <textarea id="terms" name="terms" placeholder="e.g. Staff meeting&#10;Optional tutorial" required></textarea>
+          <div class="checks" aria-label="Event fields to search">
+            <label class="check"><input type="checkbox" name="field" value="summary" {{if index .Fields "summary"}}checked{{end}}> Event title</label>
+            <label class="check"><input type="checkbox" name="field" value="description" {{if index .Fields "description"}}checked{{end}}> Description</label>
+            <label class="check"><input type="checkbox" name="field" value="location" {{if index .Fields "location"}}checked{{end}}> Location</label>
+          </div>
+        </div>
+      </section>
+
+      <div class="submit-row">
+        <button type="submit">Make my new URL</button>
+        <p class="privacy">The source address and filter settings are encrypted before they are saved.</p>
+      </div>
+      <div id="feedback" class="feedback" aria-live="polite">
+        {{if .Error}}{{template "form-error" .}}{{else if .FeedURL}}{{template "feed-result" .}}{{end}}
+      </div>
+      <footer>Matches are case-insensitive and checked against event text.</footer>
+    </form>
+  </main>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{{define "feed-result"}}
+<section class="result" aria-live="polite">
+  <h2>Your filtered calendar is ready</h2>
+  <p>Add this address to Google Calendar using “From URL”. Keep it private.</p>
+  <label class="visually-hidden" for="output-url">Filtered calendar URL</label>
+  <input id="output-url" class="feed-url" type="url" readonly value="{{.FeedURL}}">
+</section>
+{{end}}
