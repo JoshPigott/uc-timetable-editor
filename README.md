@@ -1,6 +1,6 @@
 # Timetable Filter
 
-A small Go server that creates filtered Google Calendar iCal feeds. It removes events when any phrase matches a selected title, description, or location field.
+A small Go server that creates new calendar iCal links and stores optional filter settings. The links currently return the original calendar unchanged.
 
 ## Start locally
 

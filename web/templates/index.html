@@ -12,16 +12,16 @@
   <main class="shell">
     <div class="brand"><span class="brand-mark" aria-hidden="true">T</span><span>Timetable Filter</span></div>
     <h1>A calendar that fits your week.</h1>
-    <p class="intro">Create a filtered Google Calendar feed. Choose phrases and event details to check, and matching events will be removed.</p>
+    <p class="intro">Create a new link for your calendar. Your events will be returned unchanged.</p>
 
     <form id="feed-form" class="card" action="/create" method="post"
           hx-post="/create" hx-target="#feedback" hx-swap="innerHTML">
       <section class="step" aria-labelledby="step1">
         <span class="number" aria-hidden="true">1</span>
         <div class="step-content">
-          <label id="step1" class="title" for="feed-url">Paste your Google Calendar iCal URL</label>
-          <p class="hint">In Google Calendar, open Settings → your calendar → Integrate calendar → copy the iCal address.</p>
-          <input id="feed-url" name="feed_url" type="url" placeholder="https://calendar.google.com/calendar/ical/..." required autocomplete="url">
+          <label id="step1" class="title" for="feed-url">Paste your calendar iCal URL</label>
+          <p class="hint">Open your calendar settings, find its iCal address, and paste it here.</p>
+          <input id="feed-url" name="feed_url" type="url" placeholder="https://…/calendar/ical/..." required autocomplete="url">
           <p class="micro">Treat this address like a password. Anyone with it may be able to view your calendar.</p>
         </div>
       </section>
@@ -29,9 +29,9 @@
       <section class="step" aria-labelledby="step2">
         <span class="number" aria-hidden="true">2</span>
         <div class="step-content">
-          <label id="step2" class="title" for="terms">Choose what to remove</label>
-          <p class="hint">Enter one phrase per line. Any event containing a phrase in a selected field will be removed.</p>
-          <textarea id="terms" name="terms" placeholder="e.g. Staff meeting&#10;Optional tutorial" required></textarea>
+          <label id="step2" class="title" for="terms">Optional filter settings</label>
+          <p class="hint">You can leave these blank. Settings are saved, and events are returned unchanged.</p>
+          <textarea id="terms" name="terms" placeholder="e.g. Staff meeting&#10;Optional tutorial"></textarea>
           <div class="checks" aria-label="Event fields to search">
             <label class="check"><input type="checkbox" name="field" value="summary" {{if index .Fields "summary"}}checked{{end}}> Event title</label>
             <label class="check"><input type="checkbox" name="field" value="description" {{if index .Fields "description"}}checked{{end}}> Description</label>
@@ -47,7 +47,7 @@
       <div id="feedback" class="feedback" aria-live="polite">
         {{if .Error}}{{template "form-error" .}}{{else if .FeedURL}}{{template "feed-result" .}}{{end}}
       </div>
-      <footer>Matches are case-insensitive and checked against event text.</footer>
+      <footer>Your new calendar link returns the source calendar unchanged.</footer>
     </form>
   </main>
 </body>

@@ -8,14 +8,14 @@ import (
 	"timetable-editor/internal/backend"
 )
 
-// Calendar returns an iCal response for a saved filtered feed token.
+// Calendar returns an iCal response for a saved feed token.
 func (h *Handler) Calendar(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
 	if token == "" || len(token) > 100 {
 		http.NotFound(w, r)
 		return
 	}
-	calendar, err := h.service.FilteredCalendar(r.Context(), token)
+	calendar, err := h.service.Calendar(r.Context(), token)
 	if errors.Is(err, backend.ErrFeedNotFound) {
 		http.NotFound(w, r)
 		return

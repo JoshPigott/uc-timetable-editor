@@ -13,20 +13,20 @@ import (
 
 const maxCalendarBytes = 10 << 20
 
-// Service coordinates feed storage, Google Calendar fetching, and iCal filtering.
+// Service coordinates feed storage and calendar fetching.
 type Service struct {
 	repository FeedRepository
 	client     *http.Client
 }
 
-// NewService creates the backend use cases with a bounded Google feed client.
+// NewService creates the backend use cases with a bounded calendar client.
 func NewService(repository FeedRepository) *Service {
 	return &Service{
 		repository: repository,
 		client: &http.Client{
 			Timeout: 25 * time.Second,
 			CheckRedirect: func(request *http.Request, previous []*http.Request) error {
-				if len(previous) >= 5 || !AllowedGoogleCalendarURL(request.URL) {
+				if len(previous) >= 5 || !AllowedCalendarURL(request.URL) {
 					return http.ErrUseLastResponse
 				}
 				return nil
@@ -35,11 +35,26 @@ func NewService(repository FeedRepository) *Service {
 	}
 }
 
+// NewServiceWithClient uses a supplied transport while keeping the feed redirect policy.
+func NewServiceWithClient(repository FeedRepository, client *http.Client) *Service {
+	service := NewService(repository)
+	if client == nil {
+		return service
+	}
+	copy := *client
+	if copy.Timeout <= 0 || copy.Timeout > 25*time.Second {
+		copy.Timeout = 25 * time.Second
+	}
+	copy.CheckRedirect = service.client.CheckRedirect
+	service.client = &copy
+	return service
+}
+
 // CreateFeed validates and saves a source URL and its event filters.
 func (s *Service) CreateFeed(ctx context.Context, sourceURL string, rules Filters) (string, error) {
 	parsed, err := url.Parse(sourceURL)
-	if err != nil || !AllowedGoogleCalendarURL(parsed) {
-		return "", errors.New("enter a Google Calendar iCal URL using HTTPS")
+	if err != nil || !AllowedCalendarURL(parsed) {
+		return "", errors.New("enter a supported HTTPS calendar iCal URL")
 	}
 	cleanRules, err := normalizeFilters(rules)
 	if err != nil {
@@ -48,14 +63,14 @@ func (s *Service) CreateFeed(ctx context.Context, sourceURL string, rules Filter
 	return s.repository.Create(ctx, FeedConfig{SourceURL: sourceURL, Filters: cleanRules})
 }
 
-// FilteredCalendar loads a saved feed, fetches its source, and removes matching events.
-func (s *Service) FilteredCalendar(ctx context.Context, token string) ([]byte, error) {
+// Calendar loads a saved feed and returns its source calendar unchanged.
+func (s *Service) Calendar(ctx context.Context, token string) ([]byte, error) {
 	config, err := s.repository.Lookup(ctx, token)
 	if err != nil {
 		return nil, err
 	}
 	sourceURL, err := url.Parse(config.SourceURL)
-	if err != nil || !AllowedGoogleCalendarURL(sourceURL) {
+	if err != nil || !AllowedCalendarURL(sourceURL) {
 		return nil, errors.New("saved calendar source is invalid")
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, config.SourceURL, nil)
@@ -75,12 +90,16 @@ func (s *Service) FilteredCalendar(ctx context.Context, token string) ([]byte, e
 	if err != nil || len(body) > maxCalendarBytes {
 		return nil, errors.New("calendar source returned an invalid or oversized calendar")
 	}
-	return FilterCalendar(body, config.Filters)
+	return body, nil
 }
 
-// AllowedGoogleCalendarURL limits feed fetching to HTTPS Google Calendar iCal URLs.
-func AllowedGoogleCalendarURL(source *url.URL) bool {
-	if source == nil || source.Scheme != "https" || !strings.EqualFold(source.Hostname(), "calendar.google.com") || source.User != nil || source.Fragment != "" {
+// AllowedCalendarURL limits feed fetching to supported HTTPS iCal hosts.
+func AllowedCalendarURL(source *url.URL) bool {
+	if source == nil || source.Scheme != "https" || source.User != nil || source.Fragment != "" {
+		return false
+	}
+	host := strings.ToLower(source.Hostname())
+	if host != "timetable.canterbury.ac.nz" {
 		return false
 	}
 	if port := source.Port(); port != "" && port != "443" {
@@ -100,9 +119,6 @@ func normalizeFilters(rules Filters) (Filters, error) {
 			seenFields[field] = true
 		}
 	}
-	if len(fields) == 0 {
-		return Filters{}, errors.New("select at least one event field to search")
-	}
 	terms := make([]string, 0, len(rules.Terms))
 	seenTerms := make(map[string]bool)
 	for _, term := range rules.Terms {
@@ -119,8 +135,8 @@ func normalizeFilters(rules Filters) (Filters, error) {
 			seenTerms[key] = true
 		}
 	}
-	if len(terms) == 0 || len(terms) > 40 {
-		return Filters{}, errors.New("add between 1 and 40 filter phrases")
+	if len(terms) > 40 {
+		return Filters{}, errors.New("add no more than 40 filter phrases")
 	}
 	return Filters{Terms: terms, Fields: fields}, nil
 }
