@@ -8,10 +8,12 @@ import (
 // ErrFeedNotFound identifies an unknown public feed token.
 var ErrFeedNotFound = errors.New("feed not found")
 
-// Filters stores the optional phrase and field choices from the form.
+// Filters stores the event types selected for a calendar feed.
 type Filters struct {
-	Terms  []string `json:"terms"`
-	Fields []string `json:"fields"`
+	Terms                []string `json:"terms,omitempty"`
+	Fields               []string `json:"fields,omitempty"`
+	ExcludedSummaryTypes []string `json:"excluded_summary_types,omitempty"`
+	FilterSummary        bool     `json:"filter_summary,omitempty"`
 }
 
 // FeedConfig is the sensitive source URL and its filtering rules.

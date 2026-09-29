@@ -1,0 +1,36 @@
+{{define "event-filters"}}
+<form id="feed-form" action="/create" method="post"
+      hx-post="/create" hx-target="#feedback" hx-swap="innerHTML">
+  <input type="hidden" name="feed_url" value="{{.SourceURL}}">
+  <input type="hidden" name="event_types_ready" value="true">
+  <section class="step" aria-labelledby="step2">
+    <span class="number" aria-hidden="true">2</span>
+    <div class="step-content">
+      <h2 id="step2" class="title">Choose the event types to include</h2>
+      <p class="hint">Everything starts switched on. Turn off any event type you want to leave out.</p>
+      {{if .EventTypes}}
+        <input type="hidden" name="filter_summary" value="true">
+        <div class="event-options" aria-label="Event types">
+          {{range .EventTypes}}
+            <input type="hidden" name="available_summary" value="{{.}}">
+            <label class="event-option">
+              <input type="checkbox" name="summary_type" value="{{.}}" {{if index $.SelectedSummaries .}}checked{{end}}>
+              <span>{{.}}</span>
+            </label>
+          {{end}}
+        </div>
+      {{else}}
+        <p class="micro">No event titles were found. The new link will include all events.</p>
+      {{end}}
+    </div>
+  </section>
+
+  <div class="submit-row">
+    <button type="submit">Make my new URL</button>
+    <p class="privacy">The source address and filter settings are encrypted before they are saved.</p>
+  </div>
+  <div id="feedback" class="feedback" aria-live="polite">
+    {{if .Error}}{{template "form-error" .}}{{else if .FeedURL}}{{template "feed-result" .}}{{end}}
+  </div>
+</form>
+{{end}}

@@ -7,7 +7,38 @@ import (
 	"timetable-editor/internal/backend"
 )
 
-const maxFormBytes = 16 << 10
+const maxFormBytes = 128 << 10
+
+// AnalyzeCalendar reads the supplied calendar and returns its personalized event choices.
+func (h *Handler) AnalyzeCalendar(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxFormBytes)
+	if err := r.ParseForm(); err != nil {
+		h.renderAnalyzeError(w, r, pageData{Error: "The form was too large or invalid."}, http.StatusBadRequest)
+		return
+	}
+	sourceURL := strings.TrimSpace(r.FormValue("feed_url"))
+	types, err := h.service.EventTypes(r.Context(), sourceURL)
+	if err != nil {
+		h.renderAnalyzeError(w, r, pageData{SourceURL: sourceURL, Error: err.Error()}, http.StatusBadRequest)
+		return
+	}
+	selected := make(map[string]bool, len(types))
+	for _, eventType := range types {
+		selected[eventType] = true
+	}
+	data := pageData{SourceURL: sourceURL, EventTypes: types, SelectedSummaries: selected, Analyzed: true}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	if isHTMX(r) {
+		if err := h.templates.ExecuteTemplate(w, "event-filters", data); err != nil {
+			http.Error(w, "Could not display event filters", http.StatusInternalServerError)
+		}
+		return
+	}
+	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
+		http.Error(w, "Page unavailable", http.StatusInternalServerError)
+	}
+}
 
 // CreateFeed validates form values and returns the new subscription link.
 func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
@@ -16,11 +47,20 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 		h.renderFormError(w, r, pageData{Error: "The form was too large or invalid."}, http.StatusBadRequest)
 		return
 	}
-	data := pageData{SourceURL: strings.TrimSpace(r.FormValue("feed_url")), Terms: r.FormValue("terms"), Fields: selectedFields(r.Form["field"])}
-	filters := backendFilters(r.FormValue("terms"), r.Form["field"])
+	data := pageData{
+		SourceURL:         strings.TrimSpace(r.FormValue("feed_url")),
+		EventTypes:        cleanEventTypes(r.Form["available_summary"]),
+		SelectedSummaries: selectedSummaries(r.Form["summary_type"]),
+		Analyzed:          r.FormValue("event_types_ready") == "true",
+	}
+	filters := backend.Filters{
+		ExcludedSummaryTypes: excludedFromAvailable(data.EventTypes, data.SelectedSummaries),
+		FilterSummary:        r.FormValue("filter_summary") == "true",
+	}
 	token, err := h.service.CreateFeed(r.Context(), data.SourceURL, filters)
 	if err != nil {
-		h.renderFormError(w, r, pageData{SourceURL: data.SourceURL, Terms: data.Terms, Fields: data.Fields, Error: err.Error()}, http.StatusBadRequest)
+		data.Error = err.Error()
+		h.renderFormError(w, r, data, http.StatusBadRequest)
 		return
 	}
 	data.FeedURL = h.feedURL(r, token)
@@ -37,18 +77,36 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// selectedFields normalizes checked field names before backend validation.
-func selectedFields(values []string) map[string]bool {
+func cleanEventTypes(values []string) []string {
+	types := make([]string, 0, len(values))
+	seen := make(map[string]bool)
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		key := strings.ToLower(value)
+		if value != "" && !seen[key] {
+			types = append(types, value)
+			seen[key] = true
+		}
+	}
+	return types
+}
+
+func selectedSummaries(values []string) map[string]bool {
 	selected := make(map[string]bool)
-	for _, field := range values {
-		selected[strings.ToLower(strings.TrimSpace(field))] = true
+	for _, value := range values {
+		selected[strings.TrimSpace(value)] = true
 	}
 	return selected
 }
 
-func backendFilters(termsText string, fields []string) backend.Filters {
-	terms := strings.FieldsFunc(termsText, func(char rune) bool { return char == '\n' || char == '\r' })
-	return backend.Filters{Terms: terms, Fields: fields}
+func excludedFromAvailable(available []string, selected map[string]bool) []string {
+	result := make([]string, 0, len(available))
+	for _, eventType := range available {
+		if !selected[eventType] {
+			result = append(result, eventType)
+		}
+	}
+	return result
 }
 
 func (h *Handler) renderFormError(w http.ResponseWriter, r *http.Request, data pageData, status int) {
@@ -58,6 +116,22 @@ func (h *Handler) renderFormError(w http.ResponseWriter, r *http.Request, data p
 		w.WriteHeader(http.StatusOK)
 		if err := h.templates.ExecuteTemplate(w, "form-error", data); err != nil {
 			http.Error(w, "Could not display the form error", http.StatusInternalServerError)
+		}
+		return
+	}
+	w.WriteHeader(status)
+	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
+		http.Error(w, "Page unavailable", http.StatusInternalServerError)
+	}
+}
+
+func (h *Handler) renderAnalyzeError(w http.ResponseWriter, r *http.Request, data pageData, status int) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	if isHTMX(r) {
+		w.WriteHeader(http.StatusOK)
+		if err := h.templates.ExecuteTemplate(w, "form-error", data); err != nil {
+			http.Error(w, "Could not display the calendar error", http.StatusInternalServerError)
 		}
 		return
 	}

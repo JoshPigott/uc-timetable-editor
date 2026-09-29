@@ -11,6 +11,7 @@ import (
 func New(app *handler.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", app.Home)
+	mux.HandleFunc("POST /analyze", app.AnalyzeCalendar)
 	mux.HandleFunc("POST /create", app.CreateFeed)
 	mux.HandleFunc("GET /feed/{token}/calendar.ics", app.Calendar)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(web.StaticFiles()))))
