@@ -26,7 +26,13 @@ func (h *Handler) AnalyzeCalendar(w http.ResponseWriter, r *http.Request) {
 	for _, eventType := range types {
 		selected[eventType] = true
 	}
-	data := pageData{SourceURL: sourceURL, EventTypes: types, SelectedSummaries: selected, Analyzed: true}
+	data := pageData{
+		SourceURL:         sourceURL,
+		EventTypes:        types,
+		SelectedSummaries: selected,
+		Analyzed:          true,
+	}
+	data.EventGroups = buildEventGroups(types, selected)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	if isHTMX(r) {
@@ -53,6 +59,7 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 		SelectedSummaries: selectedSummaries(r.Form["summary_type"]),
 		Analyzed:          r.FormValue("event_types_ready") == "true",
 	}
+	data.EventGroups = buildEventGroups(data.EventTypes, data.SelectedSummaries)
 	filters := backend.Filters{
 		ExcludedSummaryTypes: excludedFromAvailable(data.EventTypes, data.SelectedSummaries),
 		FilterSummary:        r.FormValue("filter_summary") == "true",

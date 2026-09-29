@@ -10,13 +10,17 @@
       <p class="hint">Everything starts switched on. Turn off any event type you want to leave out.</p>
       {{if .EventTypes}}
         <input type="hidden" name="filter_summary" value="true">
-        <div class="event-options" aria-label="Event types">
-          {{range .EventTypes}}
-            <input type="hidden" name="available_summary" value="{{.}}">
-            <label class="event-option">
-              <input type="checkbox" name="summary_type" value="{{.}}" {{if index $.SelectedSummaries .}}checked{{end}}>
-              <span>{{.}}</span>
-            </label>
+        <div class="filter-groups" aria-label="Event types">
+          {{range .EventGroups}}
+            <div class="event-group" data-event-group>
+              <div class="event-group-heading">
+                <details class="event-group-details">
+                  <summary class="event-group-summary">{{.Name}}</summary>
+                  {{template "event-group-options" .}}
+                </details>
+                {{template "event-group-button" .}}
+              </div>
+            </div>
           {{end}}
         </div>
       {{else}}
@@ -33,4 +37,36 @@
     {{if .Error}}{{template "form-error" .}}{{else if .FeedURL}}{{template "feed-result" .}}{{end}}
   </div>
 </form>
+{{end}}
+
+{{define "event-group-options"}}
+<div id="event-group-options-{{.ID}}" class="event-options">
+  {{range .Options}}
+    <input type="hidden" name="available_summary" value="{{.Summary}}">
+    <label class="event-option">
+      <input type="checkbox" name="summary_type" value="{{.Summary}}"
+             hx-post="/filter-groups/{{$.ID}}/state" hx-trigger="change" hx-swap="none" hx-sync="closest .event-group:replace" {{if .Selected}}checked{{end}}>
+      <span>{{.Label}}</span>
+    </label>
+  {{end}}
+</div>
+{{end}}
+
+{{define "event-group-button"}}
+<button id="event-group-button-{{.ID}}" type="button" class="event-group-all"
+        hx-post="/filter-groups/{{.ID}}/toggle" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
+{{end}}
+
+{{define "event-group-button-oob"}}
+<button id="event-group-button-{{.ID}}" type="button" class="event-group-all" hx-swap-oob="outerHTML"
+        hx-post="/filter-groups/{{.ID}}/toggle" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
+{{end}}
+
+{{define "event-group-toggle-result"}}
+{{template "event-group-options" .}}
+{{template "event-group-button-oob" .}}
+{{end}}
+
+{{define "event-group-state-result"}}
+{{template "event-group-button-oob" .}}
 {{end}}

@@ -13,6 +13,8 @@ func New(app *handler.Handler) http.Handler {
 	mux.HandleFunc("GET /", app.Home)
 	mux.HandleFunc("POST /analyze", app.AnalyzeCalendar)
 	mux.HandleFunc("POST /create", app.CreateFeed)
+	mux.HandleFunc("POST /filter-groups/{id}/toggle", app.ToggleEventGroup)
+	mux.HandleFunc("POST /filter-groups/{id}/state", app.UpdateEventGroupState)
 	mux.HandleFunc("GET /feed/{token}/calendar.ics", app.Calendar)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(web.StaticFiles()))))
 	return securityHeaders(mux)
