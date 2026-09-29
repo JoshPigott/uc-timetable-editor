@@ -8,7 +8,7 @@ import (
 // ErrFeedNotFound identifies an unknown public feed token.
 var ErrFeedNotFound = errors.New("feed not found")
 
-// Filters describes phrases that should remove matching calendar events.
+// Filters stores the optional phrase and field choices from the form.
 type Filters struct {
 	Terms  []string `json:"terms"`
 	Fields []string `json:"fields"`
