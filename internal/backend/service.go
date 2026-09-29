@@ -63,17 +63,34 @@ func (s *Service) CreateFeed(ctx context.Context, sourceURL string, rules Filter
 	return s.repository.Create(ctx, FeedConfig{SourceURL: sourceURL, Filters: cleanRules})
 }
 
-// Calendar loads a saved feed and returns its source calendar unchanged.
+// EventTypes fetches a source calendar and returns its distinct event titles.
+func (s *Service) EventTypes(ctx context.Context, source string) ([]string, error) {
+	body, err := s.fetchCalendar(ctx, source)
+	if err != nil {
+		return nil, err
+	}
+	return CalendarEventTypes(body)
+}
+
+// Calendar loads a saved feed, applies its selected event types, and returns iCal data.
 func (s *Service) Calendar(ctx context.Context, token string) ([]byte, error) {
 	config, err := s.repository.Lookup(ctx, token)
 	if err != nil {
 		return nil, err
 	}
-	sourceURL, err := url.Parse(config.SourceURL)
-	if err != nil || !AllowedCalendarURL(sourceURL) {
-		return nil, errors.New("saved calendar source is invalid")
+	body, err := s.fetchCalendar(ctx, config.SourceURL)
+	if err != nil {
+		return nil, err
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, config.SourceURL, nil)
+	return FilterCalendar(body, config.Filters)
+}
+
+func (s *Service) fetchCalendar(ctx context.Context, source string) ([]byte, error) {
+	sourceURL, err := url.Parse(source)
+	if err != nil || !AllowedCalendarURL(sourceURL) {
+		return nil, errors.New("enter a supported HTTPS calendar iCal URL")
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, source, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build calendar request: %w", err)
 	}
@@ -138,5 +155,18 @@ func normalizeFilters(rules Filters) (Filters, error) {
 	if len(terms) > 40 {
 		return Filters{}, errors.New("add no more than 40 filter phrases")
 	}
-	return Filters{Terms: terms, Fields: fields}, nil
+	excludedSummaryTypes := make([]string, 0, len(rules.ExcludedSummaryTypes))
+	seenSummaries := make(map[string]bool)
+	for _, summary := range rules.ExcludedSummaryTypes {
+		summary = strings.TrimSpace(summary)
+		if summary == "" {
+			continue
+		}
+		key := strings.ToLower(summary)
+		if !seenSummaries[key] {
+			excludedSummaryTypes = append(excludedSummaryTypes, summary)
+			seenSummaries[key] = true
+		}
+	}
+	return Filters{Terms: terms, Fields: fields, ExcludedSummaryTypes: excludedSummaryTypes, FilterSummary: rules.FilterSummary}, nil
 }

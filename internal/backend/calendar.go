@@ -2,19 +2,65 @@ package backend
 
 import (
 	"errors"
+	"sort"
 	"strings"
 	"unicode/utf8"
 )
 
-// FilterCalendar removes VEVENT blocks whose selected text fields match a phrase.
-func FilterCalendar(data []byte, rules Filters) ([]byte, error) {
-	text := strings.ReplaceAll(string(data), "\r\n", "\n")
-	text = strings.ReplaceAll(text, "\r", "\n")
-	physicalLines := strings.Split(text, "\n")
-	if len(physicalLines) > 0 && physicalLines[len(physicalLines)-1] == "" {
-		physicalLines = physicalLines[:len(physicalLines)-1]
+// CalendarEventTypes returns the distinct SUMMARY values in an iCalendar feed.
+func CalendarEventTypes(data []byte) ([]string, error) {
+	lines := calendarLines(data)
+	titles := make([]string, 0)
+	seen := make(map[string]bool)
+	inEvent := false
+	calendarStarted, calendarEnded := false, false
+	for _, line := range lines {
+		upper := strings.ToUpper(strings.TrimSpace(line))
+		if !inEvent && upper == "BEGIN:VCALENDAR" {
+			calendarStarted = true
+		}
+		if !inEvent && upper == "END:VCALENDAR" {
+			calendarEnded = true
+		}
+		if upper == "BEGIN:VEVENT" {
+			if inEvent {
+				return nil, errors.New("calendar contains a nested VEVENT")
+			}
+			inEvent = true
+			continue
+		}
+		if upper == "END:VEVENT" {
+			if !inEvent {
+				return nil, errors.New("calendar contains an unmatched VEVENT")
+			}
+			inEvent = false
+			continue
+		}
+		if !inEvent {
+			continue
+		}
+		title, ok := summaryValue(line)
+		if !ok || title == "" {
+			continue
+		}
+		key := strings.ToLower(title)
+		if !seen[key] {
+			titles = append(titles, title)
+			seen[key] = true
+		}
 	}
-	lines := unfoldLines(physicalLines)
+	if inEvent || !calendarStarted || !calendarEnded {
+		return nil, errors.New("calendar is incomplete")
+	}
+	sort.SliceStable(titles, func(i, j int) bool {
+		return strings.ToLower(titles[i]) < strings.ToLower(titles[j])
+	})
+	return titles, nil
+}
+
+// FilterCalendar keeps VEVENT blocks that match the configured event filters.
+func FilterCalendar(data []byte, rules Filters) ([]byte, error) {
+	lines := calendarLines(data)
 
 	output := make([]string, 0, len(lines))
 	event := make([]string, 0, 16)
@@ -59,6 +105,16 @@ func FilterCalendar(data []byte, rules Filters) ([]byte, error) {
 	return []byte(result.String()), nil
 }
 
+func calendarLines(data []byte) []string {
+	text := strings.ReplaceAll(string(data), "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+	physical := strings.Split(text, "\n")
+	if len(physical) > 0 && physical[len(physical)-1] == "" {
+		physical = physical[:len(physical)-1]
+	}
+	return unfoldLines(physical)
+}
+
 func unfoldLines(physical []string) []string {
 	lines := make([]string, 0, len(physical))
 	for _, line := range physical {
@@ -72,6 +128,21 @@ func unfoldLines(physical []string) []string {
 }
 
 func eventMatches(lines []string, rules Filters) bool {
+	if rules.FilterSummary {
+		excluded := make(map[string]bool, len(rules.ExcludedSummaryTypes))
+		for _, summary := range rules.ExcludedSummaryTypes {
+			excluded[strings.ToLower(strings.TrimSpace(summary))] = true
+		}
+		for _, line := range lines {
+			if summary, ok := summaryValue(line); ok && excluded[strings.ToLower(summary)] {
+				return true
+			}
+		}
+		return false
+	}
+	if len(rules.Terms) == 0 {
+		return true
+	}
 	wanted := make(map[string]bool, len(rules.Fields))
 	for _, field := range rules.Fields {
 		wanted[strings.ToLower(field)] = true
@@ -102,6 +173,18 @@ func eventMatches(lines []string, rules Filters) bool {
 		}
 	}
 	return false
+}
+
+func summaryValue(line string) (string, bool) {
+	colon := strings.IndexByte(line, ':')
+	if colon < 0 {
+		return "", false
+	}
+	name := strings.ToUpper(strings.SplitN(line[:colon], ";", 2)[0])
+	if name != "SUMMARY" {
+		return "", false
+	}
+	return strings.TrimSpace(unescapeText(line[colon+1:])), true
 }
 
 func unescapeText(value string) string {

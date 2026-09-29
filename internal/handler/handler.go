@@ -24,9 +24,10 @@ func New(service *backend.Service, publicBaseURL string) (*Handler, error) {
 }
 
 type pageData struct {
-	SourceURL string
-	Terms     string
-	Fields    map[string]bool
-	Error     string
-	FeedURL   string
+	SourceURL         string
+	EventTypes        []string
+	SelectedSummaries map[string]bool
+	Analyzed          bool
+	Error             string
+	FeedURL           string
 }
