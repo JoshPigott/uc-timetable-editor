@@ -73,6 +73,15 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #
 .event-option:focus-within { outline: 3px solid #315ce81c; border-color: var(--blue); }
 .event-option input { flex: 0 0 auto; margin: 0; accent-color: var(--blue); }
 .event-option span { overflow-wrap: anywhere; }
+.confirmation-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: #19253680; }
+.confirmation-dialog { width: min(100%, 440px); padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--white); box-shadow: 0 18px 60px #19253640; }
+.confirmation-dialog h2 { margin: 0 0 9px; font-size: 19px; }
+.confirmation-dialog p { margin: 8px 0; color: #526477; font-size: 14px; }
+.confirmation-test-name { overflow-wrap: anywhere; font-weight: 700; }
+.confirmation-test-list { max-height: 32vh; margin: 9px 0; padding-left: 22px; overflow: auto; color: var(--ink); font-size: 14px; }
+.confirmation-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+.confirmation-actions .confirmation-cancel { border: 1px solid #cdd6e2; background: #fff; color: #34435a; }
+.confirmation-actions .confirmation-cancel:hover { background: #f0f4ff; }
 .submit-row { padding-left: 42px; margin-top: 27px; }
 .analyze-row { margin-top: 15px; padding: 0; }
 button { min-height: 46px; padding: 0 19px; border: 0; border-radius: 9px; background: var(--blue); color: white; font: inherit; font-weight: 700; cursor: pointer; }

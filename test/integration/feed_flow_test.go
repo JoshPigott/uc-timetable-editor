@@ -21,8 +21,8 @@ const sourceURL = "https://timetable.canterbury.ac.nz/ical/course.ics"
 
 const calendarData = "BEGIN:VCALENDAR\n" +
 	"VERSION:2.0\n" +
-	"BEGIN:VEVENT\nUID:lecture\nSUMMARY:Lecture\nEND:VEVENT\n" +
-	"BEGIN:VEVENT\nUID:lab\nSUMMARY:Lab\nEND:VEVENT\n" +
+	"BEGIN:VEVENT\nUID:lecture\nDTSTART:20990101T100000Z\nSUMMARY:Lecture\nEND:VEVENT\n" +
+	"BEGIN:VEVENT\nUID:lab\nDTSTART:20990101T110000Z\nSUMMARY:Lab\nEND:VEVENT\n" +
 	"END:VCALENDAR\n"
 
 type staticCalendarTransport struct{}
@@ -98,7 +98,7 @@ func TestCreateFeedThenRetrieveFilteredCalendar(t *testing.T) {
 	}
 }
 
-func NewTestServer(t *testing.T) (*httptest.Server, *tokenCapturingRepository) {
+func newTestServer(t *testing.T) (*httptest.Server, *tokenCapturingRepository) {
 	t.Helper()
 
 	store, err := database.Open(filepath.Join(t.TempDir(), "feeds.db"), backend.NewSecretBox([]byte("integration test master key")))
