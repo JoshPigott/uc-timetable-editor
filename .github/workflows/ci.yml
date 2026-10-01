@@ -34,11 +34,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Load pull request metadata
-        id: pr-metadata
+      - name: Validate branch and commit conventions
         uses: actions/github-script@v7
         with:
           script: |
@@ -50,18 +46,26 @@ jobs:
               pull_number: context.issue.number,
               per_page: 100,
             });
-            const fs = require('fs');
-            const path = require('path');
-            const inputPath = path.join(process.env.RUNNER_TEMP, 'pr-conventions.json');
-            fs.writeFileSync(inputPath, JSON.stringify({
-              branch,
-              title,
-              commits: commits.map(({ commit }) => commit.message.split('\n')[0]),
-            }));
-            core.setOutput('input_path', inputPath);
 
-      - name: Validate branch and commit conventions
-        shell: pwsh
-        env:
-          PR_CONVENTIONS_FILE: ${{ steps.pr-metadata.outputs.input_path }}
-        run: ./scripts/check-pr-conventions.ps1 -InputPath $env:PR_CONVENTIONS_FILE
+            const types = 'feat|fix|ci|docs|chore|refactor|test|perf|build';
+            const branchRe = new RegExp(`^(${types})/`);
+            const subjectRe = new RegExp(`^(${types})(\\(.+\\))?: .{1,72}$`);
+
+            const expected = `Expected one of: ${types}`;
+            const problems = [];
+            if (!branchRe.test(branch)) {
+              problems.push(`branch "${branch}" must start with "<type>/". ${expected}`);
+            }
+            if (!subjectRe.test(title)) {
+              problems.push(`PR title "${title}" must be "<type>(optional scope): description". ${expected}`);
+            }
+            for (const { commit } of commits) {
+              const subject = commit.message.split('\n')[0];
+              if (!subjectRe.test(subject)) {
+                problems.push(`commit "${subject}" must be "<type>(optional scope): description". ${expected}`);
+              }
+            }
+
+            if (problems.length) {
+              core.setFailed(`Convention violations:\n- ${problems.join('\n- ')}`);
+            }
