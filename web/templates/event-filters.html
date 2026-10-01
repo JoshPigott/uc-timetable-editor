@@ -45,7 +45,7 @@
     <input type="hidden" name="available_summary" value="{{.Summary}}">
     <label class="event-option">
       <input type="checkbox" name="summary_type" value="{{.Summary}}"
-             hx-post="/filter-groups/{{$.ID}}/state" hx-trigger="change" hx-swap="none" hx-sync="closest .event-group:replace" {{if .Selected}}checked{{end}}>
+             hx-post="/filter-groups/{{$.ID}}/state" hx-trigger="change" hx-include="closest form" hx-swap="none" hx-sync="closest .event-group:replace" {{if .Selected}}checked{{end}}>
       <span>{{.Label}}</span>
     </label>
   {{end}}
@@ -54,12 +54,12 @@
 
 {{define "event-group-button"}}
 <button id="event-group-button-{{.ID}}" type="button" class="event-group-all"
-        hx-post="/filter-groups/{{.ID}}/toggle" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
+        hx-post="/filter-groups/{{.ID}}/toggle" hx-include="closest form" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
 {{end}}
 
 {{define "event-group-button-oob"}}
 <button id="event-group-button-{{.ID}}" type="button" class="event-group-all" hx-swap-oob="outerHTML"
-        hx-post="/filter-groups/{{.ID}}/toggle" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
+        hx-post="/filter-groups/{{.ID}}/toggle" hx-include="closest form" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
 {{end}}
 
 {{define "event-group-toggle-result"}}
