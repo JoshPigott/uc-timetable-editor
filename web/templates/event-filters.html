@@ -7,7 +7,7 @@
     <span class="number" aria-hidden="true">2</span>
     <div class="step-content">
       <h2 id="step2" class="title">Choose the event types to include</h2>
-      <p class="hint">Everything starts switched on. Turn off any event type you want to leave out.</p>
+      <p class="hint">Event types are based on events from the past month onward. Everything starts switched on; turn off any type you want to leave out.</p>
       {{if .EventTypes}}
         <input type="hidden" name="filter_summary" value="true">
         <div class="filter-groups" aria-label="Event types">
@@ -24,7 +24,7 @@
           {{end}}
         </div>
       {{else}}
-        <p class="micro">No event titles were found. The new link will include all events.</p>
+        <p class="micro">No recent or upcoming event types were found. The new link will include all events.</p>
       {{end}}
     </div>
   </section>
