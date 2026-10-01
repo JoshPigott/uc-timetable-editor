@@ -69,7 +69,9 @@ func (s *Service) EventTypes(ctx context.Context, source string) ([]string, erro
 	if err != nil {
 		return nil, err
 	}
-	return CalendarEventTypes(body)
+	now := time.Now()
+	since := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, -1, 0)
+	return CalendarEventTypesSince(body, since)
 }
 
 // Calendar loads a saved feed, applies its selected event types, and returns iCal data.
