@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  go:
+    name: Go checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+  pr-conventions:
+    name: Branch and commit conventions
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Load pull request metadata
+        id: pr-metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const title = context.payload.pull_request.title;
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const fs = require('fs');
+            const path = require('path');
+            const inputPath = path.join(process.env.RUNNER_TEMP, 'pr-conventions.json');
+            fs.writeFileSync(inputPath, JSON.stringify({
+              branch,
+              title,
+              commits: commits.map(({ commit }) => commit.message.split('\n')[0]),
+            }));
+            core.setOutput('input_path', inputPath);
+
+      - name: Validate branch and commit conventions
+        shell: pwsh
+        env:
+          PR_CONVENTIONS_FILE: ${{ steps.pr-metadata.outputs.input_path }}
+        run: ./scripts/check-pr-conventions.ps1 -InputPath $env:PR_CONVENTIONS_FILE
