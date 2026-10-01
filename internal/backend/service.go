@@ -70,7 +70,7 @@ func (s *Service) EventTypes(ctx context.Context, source string) ([]string, erro
 		return nil, err
 	}
 	now := time.Now()
-	since := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, -1, 0)
+	since := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -7)
 	return CalendarEventTypesSince(body, since)
 }
 
