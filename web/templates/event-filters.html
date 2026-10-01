@@ -23,6 +23,7 @@
             </div>
           {{end}}
         </div>
+        <div id="test-confirmation" aria-live="assertive"></div>
       {{else}}
         <p class="micro">No recent or upcoming event types were found. The new link will include all events.</p>
       {{end}}
@@ -41,32 +42,92 @@
 
 {{define "event-group-options"}}
 <div id="event-group-options-{{.ID}}" class="event-options">
+  {{template "event-option-inputs" .}}
+</div>
+{{end}}
+
+{{define "event-group-options-oob"}}
+<div id="event-group-options-{{.ID}}" class="event-options" hx-swap-oob="outerHTML">
+  {{template "event-option-inputs" .}}
+</div>
+{{end}}
+
+{{define "event-option-inputs"}}
   {{range .Options}}
     <input type="hidden" name="available_summary" value="{{.Summary}}">
     <label class="event-option">
       <input type="checkbox" name="summary_type" value="{{.Summary}}"
-             hx-post="/filter-groups/{{$.ID}}/state" hx-trigger="change" hx-include="closest form" hx-swap="none" hx-sync="closest .event-group:replace" {{if .Selected}}checked{{end}}>
+             {{if .IsTest}}hx-post="/filter-groups/{{$.ID}}/test-state?summary={{urlquery .Summary}}" hx-target="#test-confirmation" hx-swap="innerHTML"
+             {{else}}hx-post="/filter-groups/{{$.ID}}/state" hx-swap="none"{{end}}
+             hx-trigger="change" hx-include="closest form" hx-sync="closest .event-group:replace" {{if .Selected}}checked{{end}}>
       <span>{{.Label}}</span>
     </label>
   {{end}}
-</div>
 {{end}}
 
 {{define "event-group-button"}}
 <button id="event-group-button-{{.ID}}" type="button" class="event-group-all"
-        hx-post="/filter-groups/{{.ID}}/toggle" hx-include="closest form" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
+        {{if and .AllSelected .SelectedTestTypes}}hx-post="/filter-groups/{{.ID}}/confirm-toggle" hx-target="#test-confirmation" hx-swap="innerHTML"{{else}}hx-post="/filter-groups/{{.ID}}/toggle" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML"{{end}}
+        hx-include="closest form" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
 {{end}}
 
 {{define "event-group-button-oob"}}
 <button id="event-group-button-{{.ID}}" type="button" class="event-group-all" hx-swap-oob="outerHTML"
-        hx-post="/filter-groups/{{.ID}}/toggle" hx-include="closest form" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
+        {{if and .AllSelected .SelectedTestTypes}}hx-post="/filter-groups/{{.ID}}/confirm-toggle" hx-target="#test-confirmation" hx-swap="innerHTML"{{else}}hx-post="/filter-groups/{{.ID}}/toggle" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML"{{end}}
+        hx-include="closest form" hx-sync="closest .event-group:replace">{{if .AllSelected}}Turn all off{{else}}Turn all on{{end}}</button>
 {{end}}
 
 {{define "event-group-toggle-result"}}
 {{template "event-group-options" .}}
 {{template "event-group-button-oob" .}}
+<div id="test-confirmation" hx-swap-oob="innerHTML"></div>
 {{end}}
 
 {{define "event-group-state-result"}}
 {{template "event-group-button-oob" .}}
+<div id="test-confirmation" hx-swap-oob="innerHTML"></div>
+{{end}}
+
+{{define "event-group-confirm-result"}}
+{{template "event-group-options" .}}
+{{template "event-group-button-oob" .}}
+<div id="test-confirmation" hx-swap-oob="innerHTML"></div>
+{{end}}
+
+{{define "confirm-test-state"}}
+{{template "event-group-options-oob" .Group}}
+<div class="confirmation-backdrop">
+  <section class="confirmation-dialog" role="alertdialog" aria-modal="true" aria-labelledby="test-confirmation-title">
+    <h2 id="test-confirmation-title">Are you sure you want to remove this test?</h2>
+    <p class="confirmation-test-name">{{.Summary}}</p>
+    <div class="confirmation-actions">
+      <button type="button" class="confirmation-cancel"
+              hx-post="/filter-groups/{{.Group.ID}}/cancel" hx-include="closest form" hx-target="#test-confirmation" hx-swap="none">Cancel</button>
+      <button type="button"
+              hx-post="/filter-groups/{{.Group.ID}}/apply-test-state?summary={{urlquery .Summary}}" hx-include="closest form" hx-target="#event-group-options-{{.Group.ID}}" hx-swap="outerHTML">Remove test</button>
+    </div>
+  </section>
+</div>
+{{end}}
+
+{{define "confirm-event-group-toggle"}}
+<div class="confirmation-backdrop">
+  <section class="confirmation-dialog" role="alertdialog" aria-modal="true" aria-labelledby="group-confirmation-title">
+    <h2 id="group-confirmation-title">Turn off this group?</h2>
+    <p>Tests being turned off:</p>
+    <ul class="confirmation-test-list">
+      {{range .SelectedTestTypes}}<li>{{.}}</li>{{end}}
+    </ul>
+    <div class="confirmation-actions">
+      <button type="button" class="confirmation-cancel"
+              hx-post="/filter-groups/{{.ID}}/cancel" hx-include="closest form" hx-target="#test-confirmation" hx-swap="none">Cancel</button>
+      <button type="button"
+              hx-post="/filter-groups/{{.ID}}/toggle" hx-include="closest form" hx-target="#event-group-options-{{.ID}}" hx-swap="outerHTML">Turn all off</button>
+    </div>
+  </section>
+</div>
+{{end}}
+
+{{define "dismiss-test-confirmation"}}
+<div id="test-confirmation" hx-swap-oob="innerHTML"></div>
 {{end}}
