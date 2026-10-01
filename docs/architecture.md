@@ -1,12 +1,14 @@
 # Architecture
 
-The server renders the main form and uses HTMX to submit it. The handler reads the form, asks the backend to validate and save the feed, then returns a small HTML fragment for HTMX to place in the page. Calendar subscriptions follow a separate route: the backend looks up the saved configuration, fetches its iCal source, and returns the calendar unchanged. Optional filter settings are saved for later use.
+The server renders the main form and uses HTMX to submit it. The handler reads the form, asks the backend to validate and save the feed, then returns a small HTML fragment for HTMX to place in the page. Calendar subscriptions follow a separate route: the backend looks up the saved configuration, fetches its iCal source, and returns a copy with unwanted events removed. Filter settings are stored with the feed and reapplied on every subscription request.
+
+Filters match an event's summary title, so excluding a type removes every event sharing that title. The list of types offered on the form is limited to events from the past month, but the stored feed has no date window, so a subscription still returns past events.
 
 ```text
 Browser --GET /, POST /create--> router --> handler --> backend --> database
 Calendar app --GET /feed/{token}/calendar.ics--> router --> handler --> backend --> database
 backend --GET source iCal--> University of Canterbury timetable
-backend --unchanged iCal response--> Calendar app
+backend --filtered iCal response--> Calendar app
 ```
 
 ## Folders

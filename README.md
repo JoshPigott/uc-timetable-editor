@@ -1,6 +1,6 @@
 # Timetable Filter
 
-A small Go server that creates new calendar iCal links and stores optional filter settings. The links currently return the original calendar unchanged.
+A small Go server that creates filtered calendar iCal links. Paste a University of Canterbury iCal URL, choose which event types you want to keep, and the server returns a subscription link that serves a copy of the calendar with the unwanted events removed. Events are matched on their summary title, so removing a type removes every event of that type.
 
 ## Start locally
 
