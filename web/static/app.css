@@ -24,9 +24,8 @@ body {
 h1 { margin: 27px 0 8px; font-size: clamp(31px, 5vw, 43px); line-height: 1.12; letter-spacing: -.04em; }
 .intro { max-width: 590px; margin: 0; color: var(--muted); font-size: 17px; }
 .card { margin-top: 28px; padding: 30px; border: 1px solid var(--line); border-radius: 18px; background: var(--white); box-shadow: 0 12px 36px #1e35520b; }
-.step { display: flex; gap: 14px; margin: 0 0 25px; }
-.number { flex: 0 0 28px; height: 28px; display: grid; place-items: center; border: 1px solid #d7def0; border-radius: 50%; color: var(--blue); font-size: 13px; font-weight: 750; }
-.step-content { min-width: 0; flex: 1; }
+.step { margin: 0 0 25px; }
+.step-content { min-width: 0; }
 .title { display: block; margin: 1px 0 7px; font-size: 15px; font-weight: 700; }
 .hint { margin: 0 0 11px; color: var(--muted); font-size: 13px; }
 input[type="url"], textarea { display: block; width: 100%; border: 1px solid #cdd6e2; border-radius: 9px; background: #fff; color: var(--ink); font: inherit; outline: none; transition: border-color .15s, box-shadow .15s; }
@@ -82,26 +81,23 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #
 .confirmation-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
 .confirmation-actions .confirmation-cancel { border: 1px solid #cdd6e2; background: #fff; color: #34435a; }
 .confirmation-actions .confirmation-cancel:hover { background: #f0f4ff; }
-.submit-row { padding-left: 42px; margin-top: 27px; }
+.submit-row { margin-top: 27px; }
 .analyze-row { margin-top: 15px; padding: 0; }
 button { min-height: 46px; padding: 0 19px; border: 0; border-radius: 9px; background: var(--blue); color: white; font: inherit; font-weight: 700; cursor: pointer; }
 button:hover { background: var(--blue-dark); }
-.privacy { margin: 15px 0 0; color: var(--muted); font-size: 12px; }
 .result { margin-top: 20px; padding: 17px; border: 1px solid #b9e4d0; border-radius: 11px; background: #f2fbf6; }
 .result h2 { margin: 0 0 4px; font-size: 16px; }
 .result p { margin: 0 0 11px; color: #526477; font-size: 13px; }
 .feed-url { font: 13px ui-monospace, monospace !important; }
-.error { margin: 18px 0 0 42px; color: #ae2e2e; font-size: 14px; }
+.error { margin: 18px 0 0; color: #ae2e2e; font-size: 14px; }
 .feedback:empty { display: none; }
-footer { margin: 21px 0 0 42px; color: var(--muted); font-size: 12px; }
+footer { margin: 21px 0 0; color: var(--muted); font-size: 12px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 
 @media (max-width: 560px) {
   .shell { margin-top: 30px; }
   .card { padding: 21px 17px; }
-  .step { gap: 10px; }
-  .submit-row, .error, footer { margin-left: 38px; padding-left: 0; }
-  .analyze-row { margin-left: 0; }
+  .submit-row, .error, footer { margin-left: 0; padding-left: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
