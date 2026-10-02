@@ -14,10 +14,10 @@
               <div class="event-group-heading">
                 <details class="event-group-details">
                   <summary class="event-group-summary">{{.Name}}</summary>
-                  {{template "event-group-options" .}}
                 </details>
                 {{template "event-group-button" .}}
               </div>
+              {{template "event-group-options" .}}
             </div>
           {{end}}
         </div>
