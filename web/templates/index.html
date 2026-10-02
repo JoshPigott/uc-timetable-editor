@@ -4,26 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f7fb">
-  <title>Timetable Filter</title>
+  <title>UC Timetable Filter</title>
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/htmx.min.js" defer></script>
 </head>
 <body>
   <main class="shell">
-    <div class="brand"><span class="brand-mark" aria-hidden="true">T</span><span>Timetable Filter</span></div>
-    <h1>A calendar that fits your week.</h1>
-    <p class="intro">Create a new link for your calendar and choose which event types to include.</p>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">U</span><span>UC Timetable Filter</span></div>
+    <h1>Keep unwanted events out of your calendar.</h1>
 
     <div class="card">
       <form id="analyze-form" action="/analyze" method="post"
             hx-post="/analyze" hx-target="#filter-panel" hx-swap="innerHTML">
         <section class="step" aria-labelledby="step1">
-          <span class="number" aria-hidden="true">1</span>
           <div class="step-content">
-            <label id="step1" class="title" for="feed-url">Paste your calendar iCal URL</label>
-            <p class="hint">Open your calendar settings, find its iCal address, and paste it here.</p>
-            <input id="feed-url" name="feed_url" type="url" placeholder="https://…/calendar/ical/..." required autocomplete="url" value="{{.SourceURL}}">
-            <p class="micro">Treat this address like a password. Anyone with it may be able to view your calendar.</p>
+            <label id="step1" class="title" for="feed-url">Paste your MyUC timetable URL</label>
+            <input id="feed-url" name="feed_url" type="url" placeholder="https://timetable.canterbury.ac.nz/...." required autocomplete="url" value="{{.SourceURL}}">
             <div class="submit-row analyze-row">
               <button type="submit">Find my event types</button>
             </div>
@@ -38,7 +34,6 @@
           {{template "form-error" .}}
         {{end}}
       </div>
-      <footer>Your new calendar link includes the event types you leave switched on.</footer>
     </div>
   </main>
 </body>
