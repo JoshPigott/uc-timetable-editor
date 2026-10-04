@@ -3,6 +3,7 @@
       hx-post="/create" hx-target="#feedback" hx-swap="innerHTML">
   <input type="hidden" name="feed_url" value="{{.SourceURL}}">
   <input type="hidden" name="event_types_ready" value="true">
+  <input type="hidden" name="available_context" value="{{.GroupingHints}}">
   <section class="step" aria-labelledby="step2">
     <div class="step-content">
       <h2 id="step2" class="title">Filter events</h2>

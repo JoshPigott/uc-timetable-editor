@@ -20,12 +20,27 @@ func CalendarEventTypesSince(data []byte, since time.Time) ([]string, error) {
 }
 
 func calendarEventTypes(data []byte, since *time.Time) ([]string, error) {
+	titles, _, err := calendarEventDetails(data, since)
+	return titles, err
+}
+
+// CalendarEventDetailsSince returns distinct event titles and their descriptions
+// for events that start on or after the supplied time.
+func CalendarEventDetailsSince(data []byte, since time.Time) ([]string, map[string][]string, error) {
+	return calendarEventDetails(data, &since)
+}
+
+func calendarEventDetails(data []byte, since *time.Time) ([]string, map[string][]string, error) {
 	lines := calendarLines(data)
 	titles := make([]string, 0)
 	seen := make(map[string]bool)
+	canonicalTitle := make(map[string]string)
+	descriptions := make(map[string][]string)
+	seenDescriptions := make(map[string]map[string]bool)
 	inEvent := false
 	calendarStarted, calendarEnded := false, false
 	eventTitles := make([]string, 0, 1)
+	eventDescriptions := make([]string, 0, 1)
 	var eventStart time.Time
 	hasEventStart := false
 	for _, line := range lines {
@@ -38,17 +53,18 @@ func calendarEventTypes(data []byte, since *time.Time) ([]string, error) {
 		}
 		if upper == "BEGIN:VEVENT" {
 			if inEvent {
-				return nil, errors.New("calendar contains a nested VEVENT")
+				return nil, nil, errors.New("calendar contains a nested VEVENT")
 			}
 			inEvent = true
 			eventTitles = eventTitles[:0]
+			eventDescriptions = eventDescriptions[:0]
 			eventStart = time.Time{}
 			hasEventStart = false
 			continue
 		}
 		if upper == "END:VEVENT" {
 			if !inEvent {
-				return nil, errors.New("calendar contains an unmatched VEVENT")
+				return nil, nil, errors.New("calendar contains an unmatched VEVENT")
 			}
 			inEvent = false
 			if since == nil || (hasEventStart && !eventStart.Before(*since)) {
@@ -57,6 +73,17 @@ func calendarEventTypes(data []byte, since *time.Time) ([]string, error) {
 					if !seen[key] {
 						titles = append(titles, eventTitle)
 						seen[key] = true
+						canonicalTitle[key] = eventTitle
+					}
+					for _, description := range eventDescriptions {
+						if seenDescriptions[key] == nil {
+							seenDescriptions[key] = make(map[string]bool)
+						}
+						descriptionKey := strings.ToLower(description)
+						if !seenDescriptions[key][descriptionKey] {
+							descriptions[canonicalTitle[key]] = append(descriptions[canonicalTitle[key]], description)
+							seenDescriptions[key][descriptionKey] = true
+						}
 					}
 				}
 			}
@@ -71,18 +98,21 @@ func calendarEventTypes(data []byte, since *time.Time) ([]string, error) {
 			}
 		}
 		title, ok := summaryValue(line)
-		if !ok || title == "" {
+		if ok && title != "" {
+			eventTitles = append(eventTitles, title)
 			continue
 		}
-		eventTitles = append(eventTitles, title)
+		if description, ok := descriptionValue(line); ok && description != "" {
+			eventDescriptions = append(eventDescriptions, description)
+		}
 	}
 	if inEvent || !calendarStarted || !calendarEnded {
-		return nil, errors.New("calendar is incomplete")
+		return nil, nil, errors.New("calendar is incomplete")
 	}
 	sort.SliceStable(titles, func(i, j int) bool {
 		return strings.ToLower(titles[i]) < strings.ToLower(titles[j])
 	})
-	return titles, nil
+	return titles, descriptions, nil
 }
 
 func eventStartValue(line string) (time.Time, bool) {
@@ -249,6 +279,18 @@ func summaryValue(line string) (string, bool) {
 	}
 	name := strings.ToUpper(strings.SplitN(line[:colon], ";", 2)[0])
 	if name != "SUMMARY" {
+		return "", false
+	}
+	return strings.TrimSpace(unescapeText(line[colon+1:])), true
+}
+
+func descriptionValue(line string) (string, bool) {
+	colon := strings.IndexByte(line, ':')
+	if colon < 0 {
+		return "", false
+	}
+	name := strings.ToUpper(strings.SplitN(line[:colon], ";", 2)[0])
+	if name != "DESCRIPTION" {
 		return "", false
 	}
 	return strings.TrimSpace(unescapeText(line[colon+1:])), true

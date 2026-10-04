@@ -66,13 +66,20 @@ func (s *Service) CreateFeed(ctx context.Context, sourceURL string, rules Filter
 
 // EventTypes fetches a source calendar and returns its distinct event titles.
 func (s *Service) EventTypes(ctx context.Context, source string) ([]string, error) {
+	types, _, err := s.EventTypesWithDescriptions(ctx, source)
+	return types, err
+}
+
+// EventTypesWithDescriptions fetches recent event titles and descriptions for
+// grouping related timetable entries.
+func (s *Service) EventTypesWithDescriptions(ctx context.Context, source string) ([]string, map[string][]string, error) {
 	body, err := s.fetchCalendar(ctx, source)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	now := time.Now()
 	since := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -7)
-	return CalendarEventTypesSince(body, since)
+	return CalendarEventDetailsSince(body, since)
 }
 
 // Calendar loads a saved feed, applies its selected event types, and returns iCal data.

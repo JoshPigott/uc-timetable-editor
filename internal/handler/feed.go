@@ -1,13 +1,17 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"timetable-editor/internal/backend"
 )
 
 const maxFormBytes = 128 << 10
+
+var labeledCoursePattern = regexp.MustCompile(`(?i)(?:course|paper|subject)(?:\s+title)?\s*[:=]\s*([^.;,\r\n]{3,80})`)
 
 // AnalyzeCalendar reads the supplied calendar and returns its personalized event choices.
 func (h *Handler) AnalyzeCalendar(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +21,7 @@ func (h *Handler) AnalyzeCalendar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sourceURL := strings.TrimSpace(r.FormValue("feed_url"))
-	types, err := h.service.EventTypes(r.Context(), sourceURL)
+	types, descriptions, err := h.service.EventTypesWithDescriptions(r.Context(), sourceURL)
 	if err != nil {
 		h.renderAnalyzeError(w, r, pageData{SourceURL: sourceURL, Error: err.Error()}, http.StatusBadRequest)
 		return
@@ -26,13 +30,16 @@ func (h *Handler) AnalyzeCalendar(w http.ResponseWriter, r *http.Request) {
 	for _, eventType := range types {
 		selected[eventType] = true
 	}
+	hints := groupingHintsFromDescriptions(descriptions)
+	hintsJSON, _ := json.Marshal(hints)
 	data := pageData{
 		SourceURL:         sourceURL,
 		EventTypes:        types,
 		SelectedSummaries: selected,
 		Analyzed:          true,
+		GroupingHints:     string(hintsJSON),
 	}
-	data.EventGroups = buildEventGroups(types, selected)
+	data.EventGroups = buildEventGroups(types, selected, hints)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	if isHTMX(r) {
@@ -58,8 +65,10 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 		EventTypes:        cleanEventTypes(r.Form["available_summary"]),
 		SelectedSummaries: selectedSummaries(r.Form["summary_type"]),
 		Analyzed:          r.FormValue("event_types_ready") == "true",
+		GroupingHints:     r.FormValue("available_context"),
 	}
-	data.EventGroups = buildEventGroups(data.EventTypes, data.SelectedSummaries)
+	hints := parseGroupingHints(data.GroupingHints)
+	data.EventGroups = buildEventGroups(data.EventTypes, data.SelectedSummaries, hints)
 	filters := backend.Filters{
 		ExcludedSummaryTypes: excludedFromAvailable(data.EventTypes, data.SelectedSummaries),
 		FilterSummary:        r.FormValue("filter_summary") == "true",
@@ -82,6 +91,42 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
 		http.Error(w, "Page unavailable", http.StatusInternalServerError)
 	}
+}
+
+func groupingHintsFromDescriptions(descriptions map[string][]string) map[string][]string {
+	hints := make(map[string][]string, len(descriptions))
+	for summary, values := range descriptions {
+		seen := make(map[string]bool)
+		for _, description := range values {
+			for _, match := range courseCodePattern.FindAllString(description, -1) {
+				addGroupingHint(hints, summary, match, seen)
+			}
+			for _, parts := range labeledCoursePattern.FindAllStringSubmatch(description, -1) {
+				course := strings.TrimSpace(parts[1])
+				if len([]rune(course)) <= 80 {
+					addGroupingHint(hints, summary, course, seen)
+				}
+			}
+		}
+	}
+	return hints
+}
+
+func addGroupingHint(hints map[string][]string, summary, hint string, seen map[string]bool) {
+	hint = strings.TrimSpace(hint)
+	key := strings.ToLower(hint)
+	if hint != "" && !seen[key] {
+		hints[summary] = append(hints[summary], hint)
+		seen[key] = true
+	}
+}
+
+func parseGroupingHints(value string) map[string][]string {
+	hints := make(map[string][]string)
+	if value == "" || json.Unmarshal([]byte(value), &hints) != nil {
+		return map[string][]string{}
+	}
+	return hints
 }
 
 func cleanEventTypes(values []string) []string {
