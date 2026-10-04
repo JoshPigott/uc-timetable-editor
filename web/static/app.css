@@ -80,15 +80,22 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #
 .confirmation-actions .confirmation-cancel:hover { background: #f0f4ff; }
 .submit-row { margin-top: 27px; }
 .analyze-row { margin-top: 15px; padding: 0; }
+.analyze-loading { display: none; align-items: center; gap: 9px; color: inherit; font: inherit; vertical-align: middle; }
+#analyze-loading.htmx-request { display: inline-flex; }
+#analyze-loading.htmx-request + .analyze-idle,
+#analyze-form button:disabled .analyze-idle { display: none; }
+.loading-spinner { width: 17px; height: 17px; flex: 0 0 17px; border: 2px solid #ffffff80; border-top-color: #fff; border-radius: 50%; animation: spin .75s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 button { min-height: 46px; padding: 0 19px; border: 0; border-radius: 9px; background: var(--blue); color: white; font: inherit; font-weight: 700; cursor: pointer; }
 button:hover { background: var(--blue-dark); }
+#analyze-form button:disabled { cursor: wait; opacity: .9; }
 .result { margin-top: 20px; padding: 17px; border: 1px solid #b9e4d0; border-radius: 11px; background: #f2fbf6; }
 .result h2 { margin: 0 0 4px; font-size: 16px; }
 .result p { margin: 0 0 11px; color: #526477; font-size: 13px; }
 .copy-button { background: var(--blue); color: #fff; }
 .copy-button:hover { background: var(--blue-dark); }
 .copy-status:empty { display: none; }
-.result .copy-status { margin: 8px 0 0; color: #28734d; }
+.result .copy-status { margin: 8px 0 0; color: var(--muted); }
 .clipboard-fallback { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; }
 .error { margin: 18px 0 0; color: #ae2e2e; font-size: 14px; }
 .feedback:empty { display: none; }
@@ -107,4 +114,5 @@ footer { margin: 21px 0 0; color: var(--muted); font-size: 12px; }
   .event-option { transition: none; }
   .event-option:hover, .event-option:active { transform: none; }
   .event-group-heading, .event-group-heading::before, .event-group-summary, .event-group-summary::before { transition: none; }
+  .loading-spinner { animation: none; }
 }
