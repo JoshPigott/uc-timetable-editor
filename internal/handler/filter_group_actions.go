@@ -135,7 +135,7 @@ func (h *Handler) eventGroupFromRequest(w http.ResponseWriter, r *http.Request) 
 		return eventGroup{}, errors.New("invalid event group identifier")
 	}
 	types := cleanEventTypes(r.Form["available_summary"])
-	groups := buildEventGroups(types, selectedSummaries(r.Form["summary_type"]))
+	groups := buildEventGroups(types, selectedSummaries(r.Form["summary_type"]), parseGroupingHints(r.FormValue("available_context")))
 	if index >= len(groups) {
 		return eventGroup{}, errors.New("event group does not exist")
 	}
