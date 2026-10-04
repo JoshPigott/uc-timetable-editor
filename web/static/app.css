@@ -85,7 +85,11 @@ button:hover { background: var(--blue-dark); }
 .result { margin-top: 20px; padding: 17px; border: 1px solid #b9e4d0; border-radius: 11px; background: #f2fbf6; }
 .result h2 { margin: 0 0 4px; font-size: 16px; }
 .result p { margin: 0 0 11px; color: #526477; font-size: 13px; }
-.feed-url { font: 13px ui-monospace, monospace !important; }
+.copy-button { background: var(--blue); color: #fff; }
+.copy-button:hover { background: var(--blue-dark); }
+.copy-status:empty { display: none; }
+.result .copy-status { margin: 8px 0 0; color: #28734d; }
+.clipboard-fallback { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; }
 .error { margin: 18px 0 0; color: #ae2e2e; font-size: 14px; }
 .feedback:empty { display: none; }
 footer { margin: 21px 0 0; color: var(--muted); font-size: 12px; }
@@ -96,6 +100,7 @@ footer { margin: 21px 0 0; color: var(--muted); font-size: 12px; }
   .card { padding: 21px 17px; }
   .submit-row, .error, footer { margin-left: 0; padding-left: 0; }
   .submit-row > button { width: 100%; }
+  .result > .copy-button { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
