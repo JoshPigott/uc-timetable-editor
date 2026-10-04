@@ -2,6 +2,20 @@
 
 A small Go server that creates new calendar iCal links and stores optional filter settings. The links currently return the original calendar unchanged.
 
+## Why I made this
+
+I started this project to help a friend whose timetable had become cluttered with events he didn't need. I made this to help him out, and to learn along the way.
+
+## Screenshots
+
+Paste in a MyUC timetable URL and choose which event types to keep:
+
+![Timetable Filter showing event types to select](docs/screenshots/filter-selection.png)
+
+The app then provides a calendar URL to copy into a calendar app:
+
+![Timetable Filter showing the ready-to-copy calendar URL](docs/screenshots/filtered-calendar-ready.png)
+
 ## Start locally
 
 Requirements: Go 1.23 or newer and a C compiler for the SQLite driver.
