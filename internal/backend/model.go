@@ -26,4 +26,5 @@ type FeedConfig struct {
 type FeedRepository interface {
 	Create(context.Context, FeedConfig) (string, error)
 	Lookup(context.Context, string) (FeedConfig, error)
+	Update(context.Context, string, FeedConfig) error
 }

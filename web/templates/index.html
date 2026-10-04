@@ -21,8 +21,9 @@
             hx-indicator="#analyze-loading" hx-disabled-elt="find button">
         <section class="step" aria-labelledby="step1">
           <div class="step-content">
-            <label id="step1" class="title" for="feed-url">Paste your MyUC timetable URL</label>
+            <label id="step1" class="title" for="feed-url">Enter a MyUC timetable URL or existing filtered URL</label>
             <input id="feed-url" name="feed_url" type="url" placeholder="https://timetable.canterbury.ac.nz/...." required autocomplete="url" value="{{.SourceURL}}">
+            <p class="micro">Paste a saved filter URL to update its settings while keeping the same calendar link.</p>
             <div class="submit-row analyze-row">
               <button type="submit">
                 <span id="analyze-loading" class="htmx-indicator analyze-loading" role="status" aria-live="polite" aria-atomic="true">

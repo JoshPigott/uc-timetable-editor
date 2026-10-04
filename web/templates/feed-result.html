@@ -1,7 +1,7 @@
 {{define "feed-result"}}
 <section class="result" aria-live="polite">
-  <h2>Your new calendar URL is ready</h2>
-  <p>Add this URL to your calendar app.</p>
+  <h2>{{if .ExistingToken}}Your calendar filters are updated{{else}}Your new calendar URL is ready{{end}}</h2>
+  <p>{{if .ExistingToken}}The same URL still works in your calendar app.{{else}}Add this URL to your calendar app.{{end}}</p>
   <button class="copy-button" type="button" data-copy-url="{{.FeedURL}}">Copy URL</button>
   <p id="copy-status" class="copy-status" aria-live="polite"></p>
 </section>

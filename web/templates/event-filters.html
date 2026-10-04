@@ -2,11 +2,12 @@
 <form id="feed-form" action="/create" method="post"
       hx-post="/create" hx-target="#feedback" hx-swap="innerHTML">
   <input type="hidden" name="feed_url" value="{{.SourceURL}}">
+  <input type="hidden" name="feed_token" value="{{.ExistingToken}}">
   <input type="hidden" name="event_types_ready" value="true">
   <input type="hidden" name="available_context" value="{{.GroupingHints}}">
   <section class="step" aria-labelledby="step2">
     <div class="step-content">
-      <h2 id="step2" class="title">Filter events</h2>
+      <h2 id="step2" class="title">{{if .ExistingToken}}Update your calendar filters{{else}}Filter events{{end}}</h2>
       {{if .EventTypes}}
         <input type="hidden" name="filter_summary" value="true">
         <div class="filter-groups" aria-label="Event types">
@@ -30,7 +31,7 @@
   </section>
 
   <div class="submit-row">
-    <button type="submit">Create my filtered calendar</button>
+    <button type="submit">{{if .ExistingToken}}Update my calendar{{else}}Create my filtered calendar{{end}}</button>
   </div>
   <div id="feedback" class="feedback" aria-live="polite">
     {{if .Error}}{{template "form-error" .}}{{else if .FeedURL}}{{template "feed-result" .}}{{end}}
