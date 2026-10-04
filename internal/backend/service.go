@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -99,10 +100,18 @@ func (s *Service) fetchCalendar(ctx context.Context, source string) ([]byte, err
 	request.Header.Set("Accept", "text/calendar, text/plain;q=0.9, */*;q=0.1")
 	response, err := s.client.Do(request)
 	if err != nil {
+		var requestErr *url.Error
+		if errors.As(err, &requestErr) {
+			// Log only the host and underlying transport error; the calendar URL contains a private token.
+			log.Printf("calendar request failed for host %s: %v", sourceURL.Hostname(), requestErr.Err)
+		} else {
+			log.Printf("calendar request failed for host %s (error type %T)", sourceURL.Hostname(), err)
+		}
 		return nil, errors.New("calendar source unavailable")
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		log.Printf("calendar request to host %s returned HTTP status %d", sourceURL.Hostname(), response.StatusCode)
 		return nil, errors.New("calendar source unavailable")
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxCalendarBytes+1))

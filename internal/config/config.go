@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -26,7 +27,11 @@ func Load() (Config, error) {
 	}
 	address := os.Getenv("ADDR")
 	if address == "" {
-		address = "127.0.0.1:8080"
+		if port := os.Getenv("PORT"); port != "" {
+			address = net.JoinHostPort("0.0.0.0", port)
+		} else {
+			address = "127.0.0.1:8080"
+		}
 	}
 	databasePath := os.Getenv("TIMETABLE_DB_PATH")
 	if databasePath == "" {
