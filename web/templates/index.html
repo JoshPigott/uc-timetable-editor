@@ -17,13 +17,20 @@
 
     <div class="card">
       <form id="analyze-form" action="/analyze" method="post"
-            hx-post="/analyze" hx-target="#filter-panel" hx-swap="innerHTML">
+            hx-post="/analyze" hx-target="#filter-panel" hx-swap="innerHTML"
+            hx-indicator="#analyze-loading" hx-disabled-elt="find button">
         <section class="step" aria-labelledby="step1">
           <div class="step-content">
             <label id="step1" class="title" for="feed-url">Paste your MyUC timetable URL</label>
             <input id="feed-url" name="feed_url" type="url" placeholder="https://timetable.canterbury.ac.nz/...." required autocomplete="url" value="{{.SourceURL}}">
             <div class="submit-row analyze-row">
-              <button type="submit">Find my event types</button>
+              <button type="submit">
+                <span id="analyze-loading" class="htmx-indicator analyze-loading" role="status" aria-live="polite" aria-atomic="true">
+                  <span class="loading-spinner" aria-hidden="true"></span>
+                  <span>Searching...</span>
+                </span>
+                <span class="analyze-idle">Find my event types</span>
+              </button>
             </div>
           </div>
         </section>
