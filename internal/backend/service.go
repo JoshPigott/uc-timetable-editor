@@ -64,6 +64,25 @@ func (s *Service) CreateFeed(ctx context.Context, sourceURL string, rules Filter
 	return s.repository.Create(ctx, FeedConfig{SourceURL: sourceURL, Filters: cleanRules})
 }
 
+// FeedForEditing loads the saved source and filters for an existing feed URL.
+func (s *Service) FeedForEditing(ctx context.Context, token string) (FeedConfig, error) {
+	return s.repository.Lookup(ctx, token)
+}
+
+// UpdateFeed replaces the filtering rules for an existing feed while preserving its token.
+func (s *Service) UpdateFeed(ctx context.Context, token string, rules Filters) error {
+	config, err := s.repository.Lookup(ctx, token)
+	if err != nil {
+		return err
+	}
+	cleanRules, err := normalizeFilters(rules)
+	if err != nil {
+		return err
+	}
+	config.Filters = cleanRules
+	return s.repository.Update(ctx, token, config)
+}
+
 // EventTypes fetches a source calendar and returns its distinct event titles.
 func (s *Service) EventTypes(ctx context.Context, source string) ([]string, error) {
 	types, _, err := s.EventTypesWithDescriptions(ctx, source)

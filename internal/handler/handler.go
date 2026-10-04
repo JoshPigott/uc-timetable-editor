@@ -29,6 +29,7 @@ type pageData struct {
 	SelectedSummaries map[string]bool
 	EventGroups       []eventGroup
 	GroupingHints     string
+	ExistingToken     string
 	Analyzed          bool
 	Error             string
 	FeedURL           string

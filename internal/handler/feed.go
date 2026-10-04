@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -12,6 +14,7 @@ import (
 const maxFormBytes = 128 << 10
 
 var labeledCoursePattern = regexp.MustCompile(`(?i)(?:course|paper|subject)(?:\s+title)?\s*[:=]\s*([^.;,\r\n]{3,80})`)
+var feedTokenPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,100}$`)
 
 // AnalyzeCalendar reads the supplied calendar and returns its personalized event choices.
 func (h *Handler) AnalyzeCalendar(w http.ResponseWriter, r *http.Request) {
@@ -20,15 +23,35 @@ func (h *Handler) AnalyzeCalendar(w http.ResponseWriter, r *http.Request) {
 		h.renderAnalyzeError(w, r, pageData{Error: "The form was too large or invalid."}, http.StatusBadRequest)
 		return
 	}
-	sourceURL := strings.TrimSpace(r.FormValue("feed_url"))
+	inputURL := strings.TrimSpace(r.FormValue("feed_url"))
+	sourceURL := inputURL
+	existingToken := h.existingFeedToken(r, inputURL)
+	var existingFilters backend.Filters
+	if existingToken != "" {
+		config, err := h.service.FeedForEditing(r.Context(), existingToken)
+		if err != nil {
+			message := err.Error()
+			if errors.Is(err, backend.ErrFeedNotFound) {
+				message = "That saved calendar link could not be found. Check that it is still valid."
+			}
+			h.renderAnalyzeError(w, r, pageData{SourceURL: inputURL, Error: message}, http.StatusBadRequest)
+			return
+		}
+		sourceURL = config.SourceURL
+		existingFilters = config.Filters
+	}
 	types, descriptions, err := h.service.EventTypesWithDescriptions(r.Context(), sourceURL)
 	if err != nil {
-		h.renderAnalyzeError(w, r, pageData{SourceURL: sourceURL, Error: err.Error()}, http.StatusBadRequest)
+		h.renderAnalyzeError(w, r, pageData{SourceURL: inputURL, Error: err.Error()}, http.StatusBadRequest)
 		return
 	}
 	selected := make(map[string]bool, len(types))
+	excluded := make(map[string]bool, len(existingFilters.ExcludedSummaryTypes))
+	for _, eventType := range existingFilters.ExcludedSummaryTypes {
+		excluded[strings.ToLower(strings.TrimSpace(eventType))] = true
+	}
 	for _, eventType := range types {
-		selected[eventType] = true
+		selected[eventType] = !existingFilters.FilterSummary || !excluded[strings.ToLower(eventType)]
 	}
 	hints := groupingHintsFromDescriptions(descriptions)
 	hintsJSON, _ := json.Marshal(hints)
@@ -36,6 +59,7 @@ func (h *Handler) AnalyzeCalendar(w http.ResponseWriter, r *http.Request) {
 		SourceURL:         sourceURL,
 		EventTypes:        types,
 		SelectedSummaries: selected,
+		ExistingToken:     existingToken,
 		Analyzed:          true,
 		GroupingHints:     string(hintsJSON),
 	}
@@ -66,6 +90,7 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 		SelectedSummaries: selectedSummaries(r.Form["summary_type"]),
 		Analyzed:          r.FormValue("event_types_ready") == "true",
 		GroupingHints:     r.FormValue("available_context"),
+		ExistingToken:     strings.TrimSpace(r.FormValue("feed_token")),
 	}
 	hints := parseGroupingHints(data.GroupingHints)
 	data.EventGroups = buildEventGroups(data.EventTypes, data.SelectedSummaries, hints)
@@ -73,9 +98,23 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 		ExcludedSummaryTypes: excludedFromAvailable(data.EventTypes, data.SelectedSummaries),
 		FilterSummary:        r.FormValue("filter_summary") == "true",
 	}
-	token, err := h.service.CreateFeed(r.Context(), data.SourceURL, filters)
+	var token string
+	var err error
+	if data.ExistingToken != "" {
+		if !feedTokenPattern.MatchString(data.ExistingToken) {
+			err = backend.ErrFeedNotFound
+		} else {
+			err = h.service.UpdateFeed(r.Context(), data.ExistingToken, filters)
+			token = data.ExistingToken
+		}
+	} else {
+		token, err = h.service.CreateFeed(r.Context(), data.SourceURL, filters)
+	}
 	if err != nil {
 		data.Error = err.Error()
+		if errors.Is(err, backend.ErrFeedNotFound) {
+			data.Error = "That saved calendar link could not be found. Check that it is still valid."
+		}
 		h.renderFormError(w, r, data, http.StatusBadRequest)
 		return
 	}
@@ -91,6 +130,41 @@ func (h *Handler) CreateFeed(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
 		http.Error(w, "Page unavailable", http.StatusInternalServerError)
 	}
+}
+
+func (h *Handler) existingFeedToken(r *http.Request, value string) string {
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" || parsed.RawFragment != "" {
+		return ""
+	}
+	if !h.isFeedOrigin(r, parsed) {
+		return ""
+	}
+	parts := strings.Split(strings.TrimPrefix(parsed.EscapedPath(), "/"), "/")
+	if len(parts) != 3 || parts[0] != "feed" || parts[2] != "calendar.ics" {
+		return ""
+	}
+	token, err := url.PathUnescape(parts[1])
+	if err != nil || !feedTokenPattern.MatchString(token) {
+		return ""
+	}
+	return token
+}
+
+func (h *Handler) isFeedOrigin(r *http.Request, candidate *url.URL) bool {
+	origin := h.publicBaseURL
+	if origin == "" {
+		scheme := "https"
+		if r.TLS == nil {
+			scheme = "http"
+		}
+		origin = scheme + "://" + r.Host
+	}
+	expected, err := url.Parse(origin)
+	if err != nil || expected.Host == "" {
+		return false
+	}
+	return strings.EqualFold(candidate.Scheme, expected.Scheme) && strings.EqualFold(candidate.Host, expected.Host)
 }
 
 func groupingHintsFromDescriptions(descriptions map[string][]string) map[string][]string {

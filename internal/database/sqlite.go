@@ -125,6 +125,33 @@ func (s *Store) Lookup(ctx context.Context, token string) (backend.FeedConfig, e
 	return config, nil
 }
 
+// Update encrypts a replacement configuration for an existing feed token.
+func (s *Store) Update(ctx context.Context, token string, config backend.FeedConfig) error {
+	rowID := s.box.FeedTokenDigest(token)
+	plaintext, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("encode feed config: %w", err)
+	}
+	payload, err := s.box.Seal(rowID, plaintext)
+	if err != nil {
+		return fmt.Errorf("encrypt feed config: %w", err)
+	}
+	result, err := s.db.ExecContext(ctx,
+		`UPDATE feeds SET url_hash = ?, payload = ? WHERE id_hash = ?`,
+		s.box.SourceURLDigest(config.SourceURL), payload, rowID)
+	if err != nil {
+		return fmt.Errorf("update feed config: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("check feed update: %w", err)
+	}
+	if rows == 0 {
+		return backend.ErrFeedNotFound
+	}
+	return nil
+}
+
 func randomToken() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
